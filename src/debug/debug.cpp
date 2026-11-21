@@ -16,21 +16,33 @@ void imprimirSensores(const LecturaSensores& s){
     Serial.print("  ");
   }
   Serial.println();
-  
+
   Serial.print(" -QTR: ");
   for (uint8_t i = 0; i < NUM_QTR; i++) {
     Serial.print(s.qtr[i]);
     Serial.print(s.linea[i] ? "(L) " : "(-) "); //Linea o No
   }
   Serial.println();
+
+  Serial.print("--ENC: ");
+  for (uint8_t i = 0; i < NUM_ENC; i++) {
+    Serial.print(s.encRaw[i]);
+    Serial.print("  ");
+  }
+
+  Serial.println();
+
 };   
 
 void imprimirArranque(bool listo, bool go) {
+
   if (!DEBUG_SERIAL) return;
 
   static uint32_t ultimo = 0;
   uint32_t ahora = millis();
+
   if (ahora - ultimo < DEBUG_INTERVALO_MS) return;
+  
   ultimo = ahora;
 
   Serial.printf("RDY=%d  GO=%d\n", listo, go);

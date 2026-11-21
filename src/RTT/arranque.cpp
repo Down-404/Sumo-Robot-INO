@@ -5,7 +5,7 @@
 
 void iniciarArranque() {
   pinMode(MODR01_RDY, INPUT);
-  pinMode(MODR01_GO, INPUT);
+  pinMode(MODR01_GO, INPUT_PULLDOWN); //evita leerlo mal, ruido, siempre 0
 }
 
 bool moduloListo() {
