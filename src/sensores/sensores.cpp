@@ -8,12 +8,14 @@
 //I2C
 #include <Wire.h>
 
-void IniciarSensores(){
+void iniciarSensores(){
     //inciar I2C
-    Wire.begin(I2C0_SDA, I2C0_SCL); 
+    Wire.begin(I2C0_SDA, I2C0_SCL);
+    Wire.setClock(400000);
+    //Bus2 
     Wire1.begin(I2C1_SDA, I2C1_SCL);// el bus se inicia una vez aqui el SDA SCL
     //reloj
-    Wire.setClock(400000);
+    Wire1.setClock(400000);
     //inciar sensores
     iniciarVLX();
     iniciarQTR();

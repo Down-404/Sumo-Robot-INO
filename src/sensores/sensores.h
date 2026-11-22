@@ -9,6 +9,7 @@ struct LecturaSensores
     uint16_t qtr[NUM_QTR];  // valor crudo
     bool linea[NUM_QTR];      
     uint16_t encRaw[NUM_ENC]; 
+    bool encActivo[NUM_ENC]; //
     //encoders, linea, etc
 }; //SI LLEVA ; LOS VOID SON LOS QUE NO LLEVA ;
 

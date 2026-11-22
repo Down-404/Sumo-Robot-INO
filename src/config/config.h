@@ -46,7 +46,7 @@ constexpr uint8_t I2C0_SCL = 9;
 //AS5600 #2 
 constexpr uint8_t I2C1_SDA = 4;
 constexpr uint8_t I2C1_SCL = 5;
----------------------------------
+//-------------------------------
 
 //AS5600
 constexpr uint8_t NUM_ENC = 2;

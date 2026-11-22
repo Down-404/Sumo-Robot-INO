@@ -1,0 +1,563 @@
+﻿
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\config\config.h =====
+
+/*
+*   config.h
+*   Constantes de ajuste de la estrategia del robot.
+*   Aqui se cambian las constantes
+*/ 
+
+#pragma once
+
+//Includes
+#include <Arduino.h> //Por #include <cstdint>
+
+
+//distancias----------------------------------------------------------------------------------------------------------------
+
+constexpr uint16_t ENEMY_THRESHOLD = 400; //A que distancia se va a considerar visto el enemigo
+constexpr uint16_t BACK_SENSOR_DIFF = 200; //Sensor trasero
+//menor a este valor es igual a empuja
+constexpr uint16_t PUSH_THRESHOLD  = 150;  //treashold para push
+
+// tiempos------------------------------------------------------------------------------------------------------------------
+constexpr uint32_t LINE_TURN_TIME_MS        = 300;//cuanto dura line
+constexpr uint32_t ENEMY_LOST_TIME_MS       = 500;//cuanto dura enemy lost
+constexpr uint32_t PUSHING_LOSING_TIME_MS   = 400;//cuanto dura Pushing Losing
+constexpr uint32_t ENEMY_BEHIND_TIME_MS     = 400;//cuanto tiempo dura enemy behind 
+
+
+//velocidades con constantes------------------------------------------------------------------------------------------------
+constexpr float SEARCH_V       = 0.25f;
+constexpr float SEARCH_W       = 5.0f;//arco para barrer el dohyo
+constexpr float TURN_W         = 10.0f;//giro rapido en sitio
+constexpr float ATTACK_V       = 0.9f;
+constexpr float PUSH_V         = 1.2f;
+constexpr float PUSH_LOSING_V  = 1.3f;
+constexpr float LINE_BACK_V    = 0.7f;//salida al ver linea delantera
+constexpr float LINE_TURN_W    = 6.0f;
+constexpr float LINE_FWD_V     = 0.8f;//salida al ver linea trasera
+constexpr float LINE_REAR_W    = 3.0f;
+
+//PINS----------------------------------------------------------------------------------------------------------
+
+//I2C----------------------------
+//4x VL53L0X + AS5600 #1
+constexpr uint8_t I2C0_SDA = 8;
+constexpr uint8_t I2C0_SCL = 9;
+
+//AS5600 #2 
+constexpr uint8_t I2C1_SDA = 4;
+constexpr uint8_t I2C1_SCL = 5;
+//-------------------------------
+
+//AS5600
+constexpr uint8_t NUM_ENC = 2;
+enum EncIndice : uint8_t { ENC_IZQ = 0, ENC_DER = 1 };   // confirma cual es cual, numeracion
+// ENC_IZQ en Wire (I2C0, pines 8/9)
+// ENC_DER en Wire1 (I2C1, pines 4/5)
+constexpr uint8_t AS5600_DIR = 0x36;  //la misma para los dos
+
+//PWM motores
+constexpr uint32_t MOT_PWM_FREQ = 5000;   // Hz
+constexpr uint8_t  MOT_PWM_BITS = 8;      // 0-255
+
+//inversion de motores, por si acaso
+constexpr bool MOT_IZQ_INVERTIDO = false;
+constexpr bool MOT_DER_INVERTIDO = false;
+
+//VL53L0X
+constexpr uint8_t NUM_VLX = 4; //numero VLX
+enum VlxIndice : uint8_t { 
+    VLX_FL = 0, 
+    VLX_FRENTE = 1, 
+    VLX_FR = 2, 
+    VLX_ATRAS = 3 
+};
+constexpr uint8_t VLX_XSHUT[NUM_VLX] = {14, 15, 16, 17};
+constexpr uint8_t VLX_DIR[NUM_VLX]   = {0x30, 0x31, 0x32, 0x33};
+
+//QTR
+constexpr uint8_t NUM_QTR = 4; //cantidad de QTR
+enum QtrIndice : uint8_t { QTR_FL = 0, QTR_FR = 1, QTR_RL = 2, QTR_RR = 3 }; //numerar QTR
+
+constexpr uint8_t QTR_PIN_FL = 7;   // Front_L
+constexpr uint8_t QTR_PIN_FR = 6;   // Front_R
+constexpr uint8_t QTR_PIN_RL = 2;   // Back_L
+constexpr uint8_t QTR_PIN_RR = 1;   // Back_R
+
+constexpr uint8_t QTR_PIN[NUM_QTR] = {QTR_PIN_FL, QTR_PIN_FR, QTR_PIN_RL, QTR_PIN_RR};
+
+constexpr uint16_t QTR_UMBRAL = 2000;       // CALIBRAR en el dohyo (0-4095)
+constexpr bool QTR_BLANCO_ES_BAJO = true;   // blanco es valor bajo si true
+
+//BTS7960 der
+constexpr uint8_t MOT_DER_RPWM = 12;
+constexpr uint8_t MOT_DER_LPWM = 13;
+constexpr uint8_t MOT_DER_R_EN = 38;
+constexpr uint8_t MOT_DER_L_EN = 39;
+
+//BTS7960 izq
+constexpr uint8_t MOT_IZQ_RPWM = 40;
+constexpr uint8_t MOT_IZQ_LPWM = 41;
+constexpr uint8_t MOT_IZQ_R_EN = 42;
+constexpr uint8_t MOT_IZQ_L_EN = 47;
+
+//ModR01
+constexpr uint8_t MODR01_RDY = 10;
+constexpr uint8_t MODR01_GO  = 11;
+
+//RGB_ESP
+constexpr uint8_t RGB_ESP  = 48;
+
+//extra
+constexpr bool DEBUG_SERIAL = true;// false = no imprime nada
+constexpr uint32_t DEBUG_INTERVALO_MS = 200; //que tan rapido
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\control\kinematics.cpp =====
+
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\control\kinematics.h =====
+
+#pragma once
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\debug\debug.cpp =====
+
+//debug.cpp
+#include "debug.h"
+#include "../config/config.h"
+
+void imprimirSensores(const LecturaSensores& s){
+  if (!DEBUG_SERIAL) return;
+
+  static uint32_t ultimo = 0;
+  uint32_t ahora = millis();
+  if(ahora - ultimo < DEBUG_INTERVALO_MS) return;
+  ultimo = ahora; 
+  
+  Serial.print("VLX:  ");
+  for(uint8_t i = 0; i < NUM_VLX; i++){
+    Serial.print(s.dist[i]);
+    Serial.print("  ");
+  }
+  Serial.println();
+
+  Serial.print(" -QTR: ");
+  for (uint8_t i = 0; i < NUM_QTR; i++) {
+    Serial.print(s.qtr[i]);
+    Serial.print(s.linea[i] ? "(L) " : "(-) "); //Linea o No
+  }
+  Serial.println();
+
+  Serial.print("--ENC: ");
+  for (uint8_t i = 0; i < NUM_ENC; i++) {
+    Serial.print(s.encRaw[i]);
+    Serial.print("  ");
+  }
+
+  Serial.println();
+
+};   
+
+void imprimirArranque(bool listo, bool go) {
+
+  if (!DEBUG_SERIAL) return;
+
+  static uint32_t ultimo = 0;
+  uint32_t ahora = millis();
+
+  if (ahora - ultimo < DEBUG_INTERVALO_MS) return;
+  
+  ultimo = ahora;
+
+  Serial.printf("RDY=%d  GO=%d\n", listo, go);
+}
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\debug\debug.h =====
+
+//debug.h
+#pragma once
+//include
+#include <Arduino.h>
+#include "../sensores/sensores.h"
+
+void imprimirSensores(const LecturaSensores& s);
+
+void imprimirArranque(bool listo, bool go);
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\logica\logica.cpp =====
+
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\logica\logica.h =====
+
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\motores\bts.cpp =====
+
+//bts.cpp
+#include "bts.h"
+#include "../config/config.h"
+
+static void setMotor(uint8_t pinFwd, uint8_t pinRev, int v, bool invertido){ //limite y sentido
+    if(invertido){
+        v = -v;
+    }
+    v = constrain(v, -255, 255); //limitar a rango
+
+    if(v > 0){      //si v es positivo 
+        ledcWrite(pinRev, 0);
+        ledcWrite(pinFwd, v);
+    }
+    else if (v < 0){ //negativo
+        ledcWrite(pinRev, -v);
+        ledcWrite(pinFwd, 0);
+    }
+    else{   //0
+        ledcWrite(pinRev, 0);
+        ledcWrite(pinFwd, 0);
+    }
+}
+void iniciarMotores(){
+
+    const uint8_t pwmPines[4] = = {MOT_IZQ_RPWM, MOT_IZQ_LPWM, MOT_DER_RPWM, MOT_DER_LPWM};
+    const uint8_t enPines[4]  = {MOT_IZQ_R_EN, MOT_IZQ_L_EN, MOT_DER_R_EN, MOT_DER_L_EN};
+
+    for(uint8_t i = 0; i < 4; i++){// LOW lo mas antes posible para que no salgan volando solos
+        pinMode(pwmPines[i], OUTPUT);
+        digitalWrite(pwmPines[i], LOW)
+    }
+
+    for(uint8_t i = 0; i < 4; i++){ //enables en high, sin enable no mueve
+        pinMode(enPines[i], OUTPUT);
+        digitalWrite(enPines[i], HIGH);
+    }
+
+    for (uint8_t i = 0; i < 4; i++) {//activa el PWM (core 3.x)
+    ledcAttach(pwmPines[i], MOT_PWM_FREQ, MOT_PWM_BITS);
+    }
+
+    detenerMotores();
+}
+
+void motores(int izq, int der){
+    setMotor(MOT_IZQ_RPWM, MOT_IZQ_LPWM, izq, MOT_IZQ_INVERTIDO);
+    setMotor(MOT_DER_RPWM, MOT_DER_LPWM, der, MOT_DER_INVERTIDO);
+}
+
+void detenerMotores() {
+  motores(0, 0);
+}
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\motores\bts.h =====
+
+//bts.h
+#pragma once
+#include <Arduino.h>
+
+void iniciarMotores();
+void motores(int izq, int der);   // -255 - 255 positivo es adelante
+void detenerMotores();
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\RTT\arranque.cpp =====
+
+//arranque.cpp
+#include "arranque.h"
+#include "../config/config.h" // .. Salir de carpeta
+
+
+void iniciarArranque() {
+  pinMode(MODR01_RDY, INPUT);
+  pinMode(MODR01_GO, INPUT_PULLDOWN); //evita leerlo mal, ruido, siempre 0
+}
+
+bool moduloListo() {
+  return digitalRead(MODR01_RDY) == HIGH;
+}
+
+bool arranqueActivo() {
+  return digitalRead(MODR01_GO) == HIGH;
+}
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\RTT\arranque.h =====
+
+//arranque.h
+#pragma once
+#include <Arduino.h>
+
+void iniciarArranque();
+bool moduloListo();      // RDY
+bool arranqueActivo();   // GO
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\sensores\encoder.cpp =====
+
+// encoders.cpp
+#include "encoder.h"
+#include "../config/config.h"
+#include <Wire.h>
+
+
+static uint16_t angulo[NUM_ENC];
+static bool activo[NUM_ENC];
+static TwoWire* bus[NUM_ENC]; //direccion de un bus I2C
+
+static bool leerRaw(TwoWire* w, uint16_t& out) {
+    w->beginTransmission(AS5600_DIR);
+    w->write(0x0C); // registro del angulo, envia dato
+    if (w->endTransmission(false) != 0) return false; // no contesta
+    if (w->requestFrom((uint8_t)AS5600_DIR, (uint8_t)2) != 2) return false;
+
+    uint16_t alto = w->read();
+    uint16_t bajo = w->read();
+    out = ((alto << 8) | bajo) & 0x0FFF; // solo 12 bits
+    return true;
+}
+void iniciarEncoders(){
+    bus[ENC_IZQ] = &Wire;// el encoder izquierdo habla por el bus 0 (& singnifica apunta en este bus)
+    bus[ENC_DER] = &Wire1;// bus 1 
+
+    for (uint8_t i = 0; i < NUM_ENC; i++) { //for para incio
+        uint16_t v;
+        activo[i] = leerRaw(*bus[i], v);        //responde o no
+        angulo[i] = activo[i] ? v : 0;
+        Serial.printf("ENC %d: %s\n", i, activo[i] ? "OK" : "ERROR"); //imprimir error o OK
+    }
+}
+
+void actualizarEncoders(){
+    for (uint8_t i = 0; i < NUM_ENC; i++) {
+    if (!activo[i]) continue;// si no respondio al inicio, lo salta
+    uint16_t v;//arbitrario v
+    if (leerRaw(*bus[i], v)) angulo[i] = v;// si falla, conserva el ultimo valor
+    }
+}
+
+uint16_t anguloRawEncoder(uint8_t indice){
+    return angulo[indice];
+} 
+
+bool encoderActivo(uint8_t indice){
+    return angulo[indice];
+}
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\sensores\encoder.h =====
+
+// encoders.h
+#pragma once
+#include <Arduino.h>
+
+void iniciarEncoders();
+void actualizarEncoders();
+uint16_t anguloRawEncoder(uint8_t indice);   // 0-4095 (4096 pasos por vuelta)
+bool encoderActivo(uint8_t indice);          // false no responde
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\sensores\qtr.cpp =====
+
+//qtr.cpp
+#include "qtr.h"
+#include "../config/config.h"
+
+static uint16_t valor[NUM_QTR]; //static no sale solo se hace 
+
+void iniciarQTR() { //ciclo for, cantidad de QTR pinMode como input
+  for (uint8_t i = 0; i < NUM_QTR; i++) {
+    pinMode(QTR_PIN[i], INPUT);
+    valor[i] = 0;
+  }
+}
+
+void actualizarQTR() { //analog Read cada pin
+  for (uint8_t i = 0; i < NUM_QTR; i++) {
+    valor[i] = analogRead(QTR_PIN[i]);
+  }
+}
+
+uint16_t valorQTR(uint8_t indice) { 
+    return valor[indice]; 
+}
+
+bool lineaQTR(uint8_t indice) {
+  return QTR_BLANCO_ES_BAJO ? (valor[indice] < QTR_UMBRAL)  //Sirve para ver si es true o false comparando si lees blanco o negro, si 
+                            : (valor[indice] > QTR_UMBRAL);
+}
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\sensores\qtr.h =====
+
+//qtr.h
+#pragma once
+
+void iniciarQTR();
+void actualizarQTR();  
+uint16_t valorQTR(uint8_t indice); 
+bool lineaQTR(uint8_t indice);   
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\sensores\sensores.cpp =====
+
+//sensores.cpp
+//includes
+#include "sensores.h"
+//sensores individuales
+#include "vlx.h"
+#include "qtr.h"
+#include "encoder.h"
+//I2C
+#include <Wire.h>
+
+void iniciarSensores(){
+    //inciar I2C
+    Wire.begin(I2C0_SDA, I2C0_SCL); 
+    Wire1.begin(I2C1_SDA, I2C1_SCL);// el bus se inicia una vez aqui el SDA SCL
+    //reloj
+    Wire.setClock(400000);
+    //inciar sensores
+    iniciarVLX();
+    iniciarQTR();
+    iniciarEncoders();
+  
+}
+
+LecturaSensores leerSensores(){
+    actualizarVLX();
+    actualizarQTR();
+    actualizarEncoders();
+
+    LecturaSensores s; //s arbitrario
+
+    //VLX
+    for(uint8_t i = 0; i < NUM_VLX; i++){//for por cada sensor
+        s.dist[i] = distanciaVLX(i); //por cada ciclo escoge VLX 
+    }
+    //SENSOR LINEA
+    for (uint8_t i = 0; i < NUM_QTR; i++){//valor crudo y bool
+        s.qtr[i]   = valorQTR(i);
+        s.linea[i] = lineaQTR(i);
+    }
+    //ENCODER
+    for(uint8_t i = 0; i < NUM_ENC; i++){
+        s.encRaw[i] = anguloRawEncoder(i);
+        s.encActivo[i] = encoderActivo(i);
+    }
+    return s; 
+}
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\sensores\sensores.h =====
+
+//sensores.h
+#pragma once
+#include <Arduino.h>
+#include "../config/config.h"
+
+struct LecturaSensores
+{
+    uint16_t dist[NUM_VLX];
+    uint16_t qtr[NUM_QTR];  // valor crudo
+    bool linea[NUM_QTR];      
+    uint16_t encRaw[NUM_ENC]; 
+    bool encActivo[NUM_ENC]; //
+    //encoders, linea, etc
+}; //SI LLEVA ; LOS VOID SON LOS QUE NO LLEVA ;
+
+void iniciarSensores();
+LecturaSensores leerSensores();
+
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\sensores\vlx.cpp =====
+
+//vlx.cpp
+#include "vlx.h"
+#include "../config/config.h" // .. Salir de carpeta
+#include <Wire.h> //I2C
+#include <Adafruit_VL53L0X.h> //libraria VLX53L0X
+
+
+static Adafruit_VL53L0X sensores[NUM_VLX];
+static bool activo[NUM_VLX];
+static uint16_t dist[NUM_VLX];
+
+void iniciarVLX(){
+    for (uint8_t i = 0; i < NUM_VLX; i++) { //ciclo for, cantidad de VLX sensores
+    pinMode(VLX_XSHUT[i], OUTPUT); //set como output salida
+    digitalWrite(VLX_XSHUT[i], LOW); //escribir, low
+    activo[i] = false; //activo o no Sirve o no
+    dist[i] = 0xFFFF; //valor inicial
+  }
+  
+  delay(10);
+
+  for (uint8_t i = 0; i < NUM_VLX; i++) {
+    bool ok = false;
+    for (uint8_t intento = 0; intento < 3 && !ok; intento++) {
+      digitalWrite(VLX_XSHUT[i], HIGH);
+      delay(30);
+      ok = sensores[i].begin(VLX_DIR[i], false, &Wire);
+      if (!ok) { digitalWrite(VLX_XSHUT[i], LOW); delay(10); }
+    }
+    if (ok) {
+      activo[i] = true;
+      sensores[i].startRangeContinuous(25);
+    }
+    Serial.printf("VLX %d: %s\n", i, ok ? "OK" : "ERROR"); //print si hay error
+  }
+}
+
+void actualizarVLX(){
+    for (uint8_t i = 0; i < NUM_VLX; i++) {
+    if (!activo[i]) continue;
+    if (sensores[i].isRangeComplete()) {
+      uint16_t d = sensores[i].readRange();
+      dist[i] = (d >= 8000) ? 0xFFFF : d;
+      /*  Lo mismo, si se cumple lo que dice hace lo primero si no lo segundo
+      if (d >= 8000) {
+      dist[i] = 0xFFFF;
+      } else {
+      dist[i] = d;
+      }
+      */
+    }
+  }
+}
+
+uint16_t distanciaVLX(uint8_t i) { return dist[i]; } //regresa valor
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\src\sensores\vlx.h =====
+
+//vlx.h
+#pragma once
+//include
+#include <Arduino.h>//Por #include <cstdint>
+
+void iniciarVLX();
+void actualizarVLX();  // actualizar el vlx 
+uint16_t distanciaVLX(uint8_t indice); //ultima distancia en mm 0xFFFF es invalido (no ve pues)
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\config.h =====
+
+
+===== C:\Users\guijo\C++Code\Arduino\SumoRobotCodeINO\sumo.ino =====
+
+//sumo.ino
+//includes---------------------------
+//sensores
+#include "src/sensores/sensores.h"
+//RTT
+#include "src/RTT/arranque.h"
+//motor BTS
+#include "src/motores/bts.h"
+//Debug
+#include "src/debug/debug.h"
+
+
+void setup(){
+    Serial.begin(115200);
+    delay(500);
+    iniciarSensores();
+    iniciarArranque();
+}
+void loop(){
+
+    LecturaSensores s = leerSensores(); //valor sensores
+    bool listo = moduloListo();
+    bool go = arranqueActivo();
+
+    //Imprimir
+    imprimirSensores(s);
+    imprimirArranque(listo, go);
+}
